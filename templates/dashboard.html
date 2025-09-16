@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Bot Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-card h3 {
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-stopped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-unknown {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .refresh-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #fd7e14, #e83e8c);
+        }
+
+        .logs-section {
+            margin-top: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .logs-container {
+            background: #1a1a1a;
+            color: #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .timestamp {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        .info-section {
+            background: #e9ecef;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-item strong {
+            color: #333;
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Telegram Bot Dashboard</h1>
+        
+        <div class="info-section">
+            <h3>📋 Bot Information</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <strong>Method</strong>
+                    Polling (Background Thread)
+                </div>
+                <div class="info-item">
+                    <strong>Platform</strong>
+                    Render.com Web Service
+                </div>
+                <div class="info-item">
+                    <strong>Framework</strong>
+                    Flask + python-telegram-bot
+                </div>
+                <div class="info-item">
+                    <strong>Dashboard</strong>
+                    Real-time Monitoring
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-grid">
+            <div class="status-card">
+                <h3>Bot Status</h3>
+                <div id="botStatus" class="status-value status-unknown">Checking...</div>
+                <small>Background polling thread</small>
+            </div>
+            
+            <div class="status-card">
+                <h3>Thread Status</h3>
+                <div id="threadStatus" class="status-value status-unknown">Checking...</div>
+                <small>Python thread alive</small>
+            </div>
+            
+            <div class="status-card">
+                <h3>Application Status</h3>
+                <div id="appStatus" class="status-value status-unknown">Checking...</div>
+                <small>Telegram application</small>
+            </div>
+            
+            <div class="status-card">
+                <h3>Last Updated</h3>
+                <div id="lastUpdated" class="status-value">Never</div>
+                <small>Status refresh time</small>
+            </div>
+        </div>
+
+        <div class="button-grid">
+            <button onclick="checkStatus()" class="refresh-btn">
+                <span id="refreshIcon">🔄</span> Refresh Status
+            </button>
+            
+            <button onclick="restartBot()" class="restart-btn">
+                <span id="restartIcon">🔄</span> Restart Bot
+            </button>
+            
+            <button onclick="pingBot()">
+                📡 Ping Service
+            </button>
+            
+            <button onclick="clearLogs()">
+                🗑️ Clear Logs
+            </button>
+            
+            <button onclick="toggleAutoRefresh()">
+                <span id="autoRefreshIcon">⏰</span> <span id="autoRefreshText">Auto-Refresh: ON</span>
+            </button>
+        </div>
+
+        <div id="messageContainer"></div>
+
+        <div class="logs-section">
+            <div class="logs-header">
+                <h3>📝 Activity Logs</h3>
+                <div>
+                    <button onclick="clearLogs()" style="padding: 5px 15px; font-size: 0.8rem;">Clear</button>
+                    <button onclick="exportLogs()" style="padding: 5px 15px; font-size: 0.8rem; margin-left: 5px;">Export</button>
+                </div>
+            </div>
+            <div id="logs" class="logs-container">
+Bot dashboard loaded successfully.
+Click 'Refresh Status' to check current bot status.
+Auto-refresh is enabled (30s intervals).
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🚀 Telegram Bot Dashboard • Running on Render.com</p>
+            <p class="timestamp">Dashboard loaded: <span id="loadTime"></span></p>
+            <p class="timestamp">Bot commands: /start, /help, /ping</p>
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshEnabled = true;
+        let refreshInterval;
+
+        // Set load time
+        document.getElementById('loadTime').textContent = new Date().toLocaleString();
+
+        // Auto-refresh setup
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(checkStatus, 30000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+
+        // Initialize auto-refresh
+        startAutoRefresh();
+
+        // Load status on page load
+        window.addEventListener('load', () => {
+            setTimeout(checkStatus, 1000); // Delay initial check by 1 second
+        });
+
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleString();
+            const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logs.textContent += `\n[${timestamp}] ${icon} ${message}`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function showMessage(message, type = 'success') {
+            const container = document.getElementById('messageContainer');
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            container.appendChild(div);
+            
+            setTimeout(() => {
+                div.remove();
+            }, 5000);
+        }
+
+        async function checkStatus() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            const originalIcon = refreshIcon.textContent;
+            refreshIcon.innerHTML = '<div class="loading"></div>';
+            
+            try {
+                log('Checking bot status...');
+                
+                const response = await fetch('/bot_status');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Update status displays
+                updateStatusDisplay('botStatus', data.bot_running);
+                updateStatusDisplay('threadStatus', data.thread_alive);
+                updateStatusDisplay('appStatus', data.application_running);
+                
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+                document.getElementById('lastUpdated').className = 'status-value';
+                
+                log(`Status: Bot=${data.bot_running ? 'Running' : 'Stopped'}, Thread=${data.thread_alive ? 'Alive' : 'Dead'}, App=${data.application_running ? 'Running' : 'Stopped'}`, 'success');
+                
+                // Check if bot needs attention
+                if (!data.bot_running || !data.thread_alive) {
+                    log('⚠️ Bot may need restart - some components are not running', 'error');
+                }
+                
+            } catch (error) {
+                log(`Error checking status: ${error.message}`, 'error');
+                showMessage('Failed to check bot status', 'error');
+                
+                // Set all to unknown
+                ['botStatus', 'threadStatus', 'appStatus'].forEach(id => {
+                    const elem = document.getElementById(id);
+                    elem.textContent = 'Error ⚠️';
+                    elem.className = 'status-value status-unknown';
+                });
+            }
+            
+            refreshIcon.textContent = originalIcon;
+        }
+
+        function updateStatusDisplay(elementId, status) {
+            const element = document.getElementById(elementId);
+            if (status === true) {
+                element.textContent = 'Running ✅';
+                element.className = 'status-value status-running';
+            } else if (status === false) {
+                element.textContent = 'Stopped ❌';
+                element.className = 'status-value status-stopped';
+            } else {
+                element.textContent = 'Unknown ❓';
+                element.className = 'status-value status-unknown';
+            }
+        }
+
+        async function restartBot() {
+            const restartIcon = document.getElementById('restartIcon');
+            const originalIcon = restartIcon.textContent;
+            restartIcon.innerHTML = '<div class="loading"></div>';
+            
+            try {
+                log('Attempting to restart bot...', 'info');
+                
+                const response = await fetch('/restart_bot', { method: 'POST' });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('Bot restart successful!', 'success');
+                    showMessage('Bot restarted successfully!', 'success');
+                    setTimeout(checkStatus, 3000); // Check status after 3 seconds
+                } else {
+                    log(`Bot restart failed: ${data.status}`, 'error');
+                    showMessage(`Failed to restart bot: ${data.status}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`Error restarting bot: ${error.message}`, 'error');
+                showMessage('Error restarting bot', 'error');
+            }
+            
+            restartIcon.textContent = originalIcon;
+        }
+
+        async function pingBot() {
+            try {
+                log('Pinging Flask service...', 'info');
+                
+                const startTime = performance.now();
+                const response = await fetch('/ping');
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`Ping successful! Response time: ${responseTime}ms`, 'success');
+                    showMessage(`Service responding in ${responseTime}ms!`, 'success');
+                } else {
+                    log('Ping failed - service not responding properly', 'error');
+                    showMessage('Service not responding properly', 'error');
+                }
+                
+            } catch (error) {
+                log(`Ping error: ${error.message}`, 'error');
+                showMessage('Failed to ping service', 'error');
+            }
+        }
+
+        function toggleAutoRefresh() {
+            autoRefreshEnabled = !autoRefreshEnabled;
+            const icon = document.getElementById('autoRefreshIcon');
+            const text = document.getElementById('autoRefreshText');
+            
+            if (autoRefreshEnabled) {
+                startAutoRefresh();
+                icon.textContent = '⏰';
+                text.textContent = 'Auto-Refresh: ON';
+                log('Auto-refresh enabled (30s intervals)', 'info');
+            } else {
+                stopAutoRefresh();
+                icon.textContent = '⏸️';
+                text.textContent = 'Auto-Refresh: OFF';
+                log('Auto-refresh disabled', 'info');
+            }
+        }
+
+        function clearLogs() {
+            const timestamp = new Date().toLocaleString();
+            document.getElementById('logs').textContent = `[${timestamp}] ℹ️ Logs cleared by user.`;
+        }
+
+        function exportLogs() {
+            const logs = document.getElementById('logs').textContent;
+            const blob = new Blob([logs], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `telegram-bot-logs-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            log('Logs exported successfully', 'success');
+        }
+
+        // Handle page visibility change to pause/resume auto-refresh
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && autoRefreshEnabled) {
+                stopAutoRefresh();
+                log('Auto-refresh paused (tab hidden)', 'info');
+            } else if (!document.hidden && autoRefreshEnabled) {
+                startAutoRefresh();
+                checkStatus(); // Immediate refresh when tab becomes visible
+                log('Auto-refresh resumed (tab visible)', 'info');
+            }
+        });
+    </script>
+</body>
+</html>

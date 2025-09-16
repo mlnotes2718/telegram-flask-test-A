@@ -45,13 +45,14 @@ last_error = None
 
 # Bot handlers
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_name = update.effective_user.first_name
+    user_name = update.effective_user.first_name if update.effective_user else "User"
     welcome_text = f"🤖 Hello {user_name}! I'm running on Render with polling!\n\n" \
                    f"Try these commands:\n" \
                    f"/help - Show available commands\n" \
                    f"/ping - Test bot response\n" \
                    f"/status - Show bot status"
-    await update.message.reply_text(welcome_text)
+    if update.message:
+        await update.message.reply_text(welcome_text)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = """
@@ -64,10 +65,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Just send me any message and I'll echo it back!
 """
-    await update.message.reply_text(help_text.strip())
+    if update.message:
+        await update.message.reply_text(help_text.strip())
 
 async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🏓 Pong! Bot is running via polling.")
+    if update.message:
+        await update.message.reply_text("🏓 Pong! Bot is running via polling.")
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uptime = time.time() - bot_start_time if bot_start_time else 0
@@ -80,7 +83,8 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🌐 Platform: Render.com
 🔧 Framework: Flask + python-telegram-bot
 """
-    await update.message.reply_text(status_text.strip())
+    if update.message:
+        await update.message.reply_text(status_text.strip())
 
 # async def echo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 #     try:
@@ -93,26 +97,31 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        text = update.message.text
-        groq_response = None
-        if groq_client:
-            try:
-                groq_response = groq_client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": text
-                        }
-                    ]
-                )
-                await update.message.reply_text(groq_response.choices[0].message.content)
-            except Exception as ge:
-                logger.error(f"Error querying Groq: {ge}")
-                await update.message.reply_text("Error querying Groq service.")
+        if update.message and update.message.text:
+            text = update.message.text
+            groq_response = None
+            if groq_client:
+                try:
+                    groq_response = groq_client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": text
+                            }
+                        ]
+                    )
+                    reply_content = groq_response.choices[0].message.content or "No response from Groq."
+                    await update.message.reply_text(reply_content)
+                except Exception as ge:
+                    logger.error(f"Error querying Groq: {ge}")
+                    await update.message.reply_text("Error querying Groq service.")
+        else:
+            logger.warning("Received update without message or text.")
     except Exception as e:
         logger.error(f"Error in echo handler: {e}")
-        await update.message.reply_text("Sorry, I encountered an error processing your message.")
+        if update.message:
+            await update.message.reply_text("Sorry, I encountered an error processing your message.")
 
 def setup_telegram_bot():
     """Initialize and configure the Telegram bot"""
@@ -120,6 +129,8 @@ def setup_telegram_bot():
     
     try:
         logger.info("Setting up Telegram bot...")
+        if not TELEGRAM_BOT_TOKEN:
+            raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required and must not be None")
         telegram_app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
         
         # Add handlers
@@ -154,11 +165,14 @@ def run_telegram_bot():
             last_error = None
             
             # Run the bot with polling
-            telegram_app.run_polling(
-                drop_pending_updates=True,
-                close_loop=False,
-                stop_signals=None  # Don't stop on signals since we're in a thread
-            )
+            if telegram_app is not None:
+                telegram_app.run_polling(
+                    drop_pending_updates=True,
+                    close_loop=False,
+                    stop_signals=None  # Don't stop on signals since we're in a thread
+                )
+            else:
+                logger.error("Telegram app is not initialized. Cannot run polling.")
             
         except Exception as e:
             logger.error(f"Error in bot thread: {e}")
@@ -243,7 +257,7 @@ def restart_bot():
             try:
                 if telegram_app.running:
                     logger.info("Stopping existing Telegram application...")
-                    telegram_app.stop()
+                    asyncio.run(telegram_app.stop())
                     time.sleep(2)  # Give it time to stop
             except Exception as e:
                 logger.warning(f"Error stopping telegram app: {e}")

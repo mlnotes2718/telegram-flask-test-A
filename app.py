@@ -20,11 +20,11 @@ app = Flask(__name__)
 # import dotenv
 # dotenv.load_dotenv()
 # Configuration
-BOT_TOKEN = os.getenv('BOT_TOKEN')
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 PORT = int(os.getenv('PORT', 5000))
 
-if not BOT_TOKEN:
-    logger.error("BOT_TOKEN environment variable is required")
+if not TELEGRAM_BOT_TOKEN:
+    logger.error("TELEGRAM_BOT_TOKEN environment variable is required")
     exit(1)
 
 # Initialize Groq client (if needed)
@@ -120,7 +120,7 @@ def setup_telegram_bot():
     
     try:
         logger.info("Setting up Telegram bot...")
-        telegram_app = Application.builder().token(BOT_TOKEN).build()
+        telegram_app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
         
         # Add handlers
         telegram_app.add_handler(CommandHandler("start", start_command))
@@ -224,7 +224,7 @@ def bot_status():
         "uptime_formatted": f"{uptime // 3600}h {(uptime % 3600) // 60}m {uptime % 60}s",
         "thread_name": bot_thread.name if bot_thread else None,
         "last_error": last_error,
-        "bot_token_configured": bool(BOT_TOKEN)
+        "bot_token_configured": bool(TELEGRAM_BOT_TOKEN)
     }
     
     logger.info(f"Bot status check: {status_data}")

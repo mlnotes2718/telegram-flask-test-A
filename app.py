@@ -17,8 +17,9 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# import dotenv
-# dotenv.load_dotenv()
+import dotenv
+dotenv.load_dotenv()
+
 # Configuration
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 PORT = int(os.getenv('PORT', 5000))
@@ -40,60 +41,15 @@ else:
 telegram_app = None
 bot_thread = None
 bot_running = False
-bot_start_time = None
-last_error = None
+
 
 # Bot handlers
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name if update.effective_user else "User"
-    welcome_text = f"🤖 Hello {user_name}! I'm running on Render with polling!\n\n" \
-                   f"Try these commands:\n" \
-                   f"/help - Show available commands\n" \
-                   f"/ping - Test bot response\n" \
-                   f"/status - Show bot status"
+    welcome_text = f"🤖 Hello {user_name}! I'm running on Render with polling!\n\n" 
     if update.message:
         await update.message.reply_text(welcome_text)
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = """
-🔧 Available commands:
-/start - Start interaction
-/help - Show this help
-/ping - Check if bot is responsive
-/status - Show bot status
-/echo <message> - Echo your message
-
-Just send me any message and I'll echo it back!
-"""
-    if update.message:
-        await update.message.reply_text(help_text.strip())
-
-async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message:
-        await update.message.reply_text("🏓 Pong! Bot is running via polling.")
-
-async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uptime = time.time() - bot_start_time if bot_start_time else 0
-    uptime_str = f"{int(uptime // 3600)}h {int((uptime % 3600) // 60)}m {int(uptime % 60)}s"
-    
-    status_text = f"""
-📊 Bot Status:
-✅ Running via polling
-⏱️ Uptime: {uptime_str}
-🌐 Platform: Render.com
-🔧 Framework: Flask + python-telegram-bot
-"""
-    if update.message:
-        await update.message.reply_text(status_text.strip())
-
-# async def echo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     try:
-#         text = update.message.text
-#         user_name = update.effective_user.first_name
-#         await update.message.reply_text(f"Hello {user_name}! You said: {text}")
-#     except Exception as e:
-#         logger.error(f"Error in echo handler: {e}")
-#         await update.message.reply_text("Sorry, I encountered an error processing your message.")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -134,10 +90,6 @@ def setup_telegram_bot():
         telegram_app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
         
         # Add handlers
-        telegram_app.add_handler(CommandHandler("start", start_command))
-        telegram_app.add_handler(CommandHandler("help", help_command))
-        telegram_app.add_handler(CommandHandler("ping", ping_command))
-        telegram_app.add_handler(CommandHandler("status", status_command))
         telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
         logger.info("Telegram bot setup complete")
@@ -194,56 +146,6 @@ def index():
     """Landing page"""
     return render_template('index.html')
 
-@app.route('/dashboard')
-def dashboard():
-    """Serve the bot dashboard"""
-    return render_template('dashboard.html')
-
-@app.route('/health')
-def health_check():
-    """Health check endpoint for Render"""
-    return jsonify({
-        "status": "healthy",
-        "service": "telegram-bot",
-        "bot_status": "running" if bot_running else "stopped",
-        "uptime": int(time.time() - bot_start_time) if bot_start_time else 0,
-        "last_error": last_error
-    })
-
-@app.route('/bot_status')
-def bot_status():
-    """Check bot status with detailed information"""
-    global bot_thread, telegram_app
-    
-    # Check thread status
-    thread_alive = bot_thread.is_alive() if bot_thread else False
-    
-    # Check application status
-    app_running = False
-    if telegram_app:
-        try:
-            app_running = telegram_app.running
-        except Exception as e:
-            logger.warning(f"Error checking app status: {e}")
-            app_running = False
-    
-    # Calculate uptime
-    uptime = int(time.time() - bot_start_time) if bot_start_time else 0
-    
-    status_data = {
-        "bot_running": bot_running,
-        "thread_alive": thread_alive,
-        "application_running": app_running,
-        "uptime_seconds": uptime,
-        "uptime_formatted": f"{uptime // 3600}h {(uptime % 3600) // 60}m {uptime % 60}s",
-        "thread_name": bot_thread.name if bot_thread else None,
-        "last_error": last_error,
-        "bot_token_configured": bool(TELEGRAM_BOT_TOKEN)
-    }
-    
-    logger.info(f"Bot status check: {status_data}")
-    return jsonify(status_data)
-
 @app.route('/restart_bot', methods=['POST'])
 def restart_bot():
     """Restart the bot (useful for debugging)"""
@@ -292,26 +194,6 @@ def restart_bot():
         last_error = str(e)
         return jsonify({"status": f"Error: {e}"}), 500
 
-@app.route('/ping')
-def ping():
-    """Simple ping endpoint"""
-    return jsonify({
-        "message": "pong",
-        "timestamp": time.time(),
-        "service": "telegram-bot-flask",
-        "healthy": True
-    })
-
-@app.route('/logs')
-def get_logs():
-    """Get recent bot activity logs"""
-    # This is a placeholder - in production you might want to read from a log file
-    return jsonify({
-        "status": "logs endpoint",
-        "note": "Log viewing not implemented yet",
-        "bot_running": bot_running,
-        "last_error": last_error
-    })
 
 # Initialize and start the bot when the module loads
 def initialize_bot():
